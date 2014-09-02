@@ -16,16 +16,16 @@ type Job struct {
 }
 
 // Job queue length (channel capacity)
-const jobQueueLength = 20
+const JobQueueLength = 20
 
-// Gophers queue length (channel capacity)
-const gopherQueueLength = 4
+// Gophers ofice size (channel capacity)
+const GophersOfficeSize = 4
 
-// Channel of jobs (jobs queue)
-var JobsQueue = make(chan Job, jobQueueLength)
+// Jobs queue (channel of jobs)
+var JobsQueue = make(chan Job, JobQueueLength)
 
-// Channel of gophers (workers queue)
-var GophersQueue = make(chan bool, gopherQueueLength)
+// Gophers office (channel of whatever)
+var GophersOffice = make(chan bool, GophersOfficeSize)
 
 func jobListener(w http.ResponseWriter, r *http.Request) {
 
@@ -36,6 +36,7 @@ func jobListener(w http.ResponseWriter, r *http.Request) {
 
 		if jsonString, err := ioutil.ReadAll(r.Body); err == nil {
 			json.Unmarshal(jsonString, &job)
+			// The received job is added to the job queue
 			JobsQueue <- job
 			// Channel length / Channel capacity in %
 			w.Write([]byte(strconv.Itoa(int(float64(len(JobsQueue)) / float64(cap(JobsQueue)) * 100.0))))
@@ -50,30 +51,24 @@ func jobListener(w http.ResponseWriter, r *http.Request) {
 // Very long and complicated process
 func process(i int) {
 	time.Sleep(time.Duration(i) * time.Second)
-	// One of our gophers is exhausted but ready for more
-	GophersQueue <- true
+	// Gopher is exhausted and leaves the office
+	<-GophersOffice
 }
 
 func main() {
 
 	// Queues management is started in an independent routine
 	go func() {
-		// The gophers queue is filled with hungry gophers
-		for i := 0; i < gopherQueueLength; i++ {
-			GophersQueue <- true
-		}
-
 		// Infinite loop for distributing incoming jobs to idle gophers
 		for {
-			select {
-			case _ = <-GophersQueue:
-				go func() {
-					select {
-					case job := <-JobsQueue:
-						process(job.Delay)
-					}
-				}()
-			}
+			// Gopher gets into the office
+			GophersOffice <- true
+			go func() {
+				select {
+				case job := <-JobsQueue:
+					process(job.Delay)
+				}
+			}()
 		}
 	}()
 
