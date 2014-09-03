@@ -1,9 +1,7 @@
-package main
+package gophersinaqueue
 
 import (
 	"encoding/json"
-	"fmt"
-	"github.com/gorilla/mux"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -41,7 +39,7 @@ func jobListener(w http.ResponseWriter, r *http.Request) {
 			// Channel length / Channel capacity in %
 			w.Write([]byte(strconv.Itoa(int(float64(len(JobsQueue)) / float64(cap(JobsQueue)) * 100.0))))
 		}
-		// Get queue state (refresh button in UI)
+
 	} else if r.Method == "GET" {
 		// Channel length / Channel capacity in %
 		w.Write([]byte(strconv.Itoa(int(float64(len(JobsQueue)) / float64(cap(JobsQueue)) * 100.0))))
@@ -55,8 +53,7 @@ func process(i int) {
 	<-GophersOffice
 }
 
-func main() {
-
+func init() {
 	// Queues management is started in an independent routine
 	go func() {
 		// Infinite loop for distributing incoming jobs to idle gophers
@@ -72,12 +69,28 @@ func main() {
 		}
 	}()
 
-	r := mux.NewRouter()
-	r.Handle("/", http.RedirectHandler("/web_server/index.html", 302))
-	r.HandleFunc("/job/", jobListener).Methods("GET", "POST")
-	r.PathPrefix("/web_server/").Handler(http.StripPrefix("/web_server", http.FileServer(http.Dir("./static/"))))
-	http.Handle("/", r)
+	http.HandleFunc("/job/", handler)
+}
 
-	fmt.Println("Set, Ready, Go!")
-	panic(http.ListenAndServe(":8000", nil))
+func handler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+
+	// Send a new job to the queue (send button in UI)
+	case "POST":
+		var job Job
+
+		if jsonString, err := ioutil.ReadAll(r.Body); err == nil {
+			json.Unmarshal(jsonString, &job)
+			// The received job is added to the job queue
+			JobsQueue <- job
+			// Channel length / Channel capacity in %
+			w.Write([]byte(strconv.Itoa(int(float64(len(JobsQueue)) / float64(cap(JobsQueue)) * 100.0))))
+		}
+
+	// Get queue state (refresh button in UI)
+	case "GET":
+		// Channel length / Channel capacity in %
+		w.Write([]byte(strconv.Itoa(int(float64(len(JobsQueue)) / float64(cap(JobsQueue)) * 100.0))))
+
+	}
 }
