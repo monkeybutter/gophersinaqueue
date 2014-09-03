@@ -1,0 +1,107 @@
+<html ng-app="GophersQueue">
+<head>
+
+	<title>Gophers in a Queue</title>
+
+	<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+	
+</head>
+<body ng-controller="MainCtl">
+
+	<div class="container theme-showcase" role="main">
+
+      <div class="jumbotron">
+        <h1>Gophers in a Queue</h1>
+        <p>A Job Queue Example in Go</p>
+
+        <form class="form-horizontal" role="form">
+
+			<div class="form-group">
+				<label for="jobName" class="col-sm-2 control-label">Name</label>
+				<div class="col-sm-2">
+					<input type="text" class="form-control" id="jobName" placeholder="Job Name" ng-model="jobName">
+				</div>
+			</div>
+
+			<div class="form-group">
+				<label for="jobSize" class="col-sm-2 control-label">Size</label>
+				<div class="col-sm-2">
+					<input type="number" class="form-control" id="jobSize" placeholder="Time Seconds" ng-model="jobSize">
+				</div>
+			</div>
+
+			<div class="form-group">
+    		    <div class="col-sm-offset-2 col-sm-10">
+    		    	<button class="btn btn-primary" ng-click="postJob()">Send &raquo;</button>
+    		    </div>
+    		</div>
+
+    	</form>
+
+    	<hr>
+
+    	<div class="row">
+        	<div class="col-md-3">
+        		<p>Jobs Queue State: {{size}}%</p>
+        	</div>
+        	<div class="col-md-2">
+        		<button class="btn btn-success" ng-click="getJob()">
+		  			<span class="glyphicon glyphicon-refresh"></span>
+		  		</button>
+		  	</div>
+		</div>
+
+        <div class="progress">
+			<div class="progress-bar" aria-valuenow="{{size}}" aria-valuemin="0" 
+			  aria-valuemax="100" ng-style="{width : ( size + '%' ) }">
+			    <span class="sr-only">{{size}}% Complete (warning)</span>
+			</div>
+		</div>
+
+      </div>
+
+    </div>
+
+
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.3/angular.min.js"></script>
+
+
+<script>
+	var app = angular.module("GophersQueue", []);
+
+	app.controller("MainCtl", ["$scope", '$http', function($scope, $http) {
+
+		$scope.jobName = "Fermat_Proof";
+		$scope.jobSize = 10;
+		$scope.size = 0;
+
+	    $scope.postJob = function () {
+	        $http({
+	            method: 'POST',
+	            url: "http://gophersinaqueue.appspot.com/job/",
+	            data: JSON.stringify({Name: $scope.jobName, Delay: $scope.jobSize}),
+	            headers: {'Content-Type': 'application/x-www-form-urlencoded'}
+	        }).success(function (response) {
+	        	$scope.size = parseInt(response)
+	            console.log("post succeed!" + response);
+	        }).error(function () {
+	            alert("Unexpected error!");
+	        });
+	    }
+
+	    $scope.getJob = function () {
+	        $http({
+	            method: 'GET',
+	            url: "http://gophersinaqueue.appspot.com/job/",
+	            headers: {'Content-Type': 'application/x-www-form-urlencoded'}
+	        }).success(function (response) {
+	            $scope.size = parseInt(response)
+	        }).error(function () {
+	            alert("Unexpected error!");
+	        });
+	    }
+		
+	}]);
+</script>
+</body>
+</html>
