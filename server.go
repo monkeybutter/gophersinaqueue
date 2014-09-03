@@ -25,27 +25,6 @@ var JobsQueue = make(chan Job, JobQueueLength)
 // Gophers office (channel of whatever)
 var GophersOffice = make(chan bool, GophersOfficeSize)
 
-func jobListener(w http.ResponseWriter, r *http.Request) {
-
-	// Send a new job to the queue (send button in UI)
-	if r.Method == "POST" {
-
-		var job Job
-
-		if jsonString, err := ioutil.ReadAll(r.Body); err == nil {
-			json.Unmarshal(jsonString, &job)
-			// The received job is added to the job queue
-			JobsQueue <- job
-			// Channel length / Channel capacity in %
-			w.Write([]byte(strconv.Itoa(int(float64(len(JobsQueue)) / float64(cap(JobsQueue)) * 100.0))))
-		}
-
-	} else if r.Method == "GET" {
-		// Channel length / Channel capacity in %
-		w.Write([]byte(strconv.Itoa(int(float64(len(JobsQueue)) / float64(cap(JobsQueue)) * 100.0))))
-	}
-}
-
 // Very long and complicated process
 func process(i int) {
 	time.Sleep(time.Duration(i) * time.Second)
